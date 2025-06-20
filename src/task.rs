@@ -49,7 +49,7 @@ impl Database {
     /// # 示例
     ///
     /// ```
-    /// let db = Database::open(".rodorc").expect("Failed to open database file");
+    /// let db = Database::open(".rododb").expect("Failed to open database file");
     /// ```
     ///
     /// [`Database`]: struct.Database.html
