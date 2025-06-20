@@ -1,9 +1,9 @@
 use std::fmt;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Seek, Write};
 
-use serde::{Serialize, Deserialize};
 use csv::{ReaderBuilder, WriterBuilder};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -17,7 +17,7 @@ pub enum Status {
     TODO,
     IN_PROGRESS,
     DONE,
-    ELSE
+    ELSE,
 }
 
 pub struct Database {
@@ -54,7 +54,7 @@ impl Database {
     /// # 示例
     ///
     /// ```
-    /// let db = Database::open(".rododb").expect("Failed to open database file");
+    /// let db = Database::open("rodo.csv").expect("Failed to open database file");
     /// ```
     ///
     /// [`Database`]: struct.Database.html
@@ -96,10 +96,11 @@ impl Database {
     /// ```
     ///
     /// [`io::Error`]: io::Error
-
-    pub fn add_task(&mut self, task: Task) ->  io::Result<()> {
+    pub fn add_task(&mut self, task: Task) -> io::Result<()> {
         let content = &task.content.clone();
-        let mut writer = WriterBuilder::new().has_headers(false).from_writer(&mut self.file);
+        let mut writer = WriterBuilder::new()
+            .has_headers(false)
+            .from_writer(&mut self.file);
         writer.serialize(task)?;
         writer.flush()?; // 确保写入磁盘
         println!("\tItem added: {}", content);
@@ -110,11 +111,30 @@ impl Database {
         let mut reader = ReaderBuilder::new()
             .has_headers(false)
             .from_reader(line.as_bytes());
-        let mut records = reader.deserialize();
-        if let Some(result) = records.next() {
+        let mut tasks = reader.deserialize();
+        if let Some(result) = tasks.next() {
             result.ok()
         } else {
             None
         }
+    }
+
+    pub fn read_tasks(&mut self) -> io::Result<Vec<Task>> {
+        // 重置文件位置到开头
+        self.file.rewind()?;
+
+        let mut reader = ReaderBuilder::new()
+            .has_headers(false)
+            .from_reader(&self.file);
+
+        let mut tasks = Vec::new();
+        for result in reader.deserialize() {
+            match result {
+                Ok(task) => tasks.push(task),
+                Err(e) => eprintln!("Failed to parse a task: {}", e),
+            }
+        }
+
+        Ok(tasks)
     }
 }
