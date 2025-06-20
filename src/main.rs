@@ -14,7 +14,7 @@ fn main() {
 
     let command = &args[1];
 
-    let mut db = Database::open(".rododb").unwrap_or_else(|err| {
+    let mut db = Database::open("rodo_tasks.csv").unwrap_or_else(|err| {
         eprintln!("Error opening database: {}", err);
         process::exit(1);
     });
