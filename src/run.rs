@@ -28,10 +28,36 @@ pub fn ls(mut db: Database) {
 
     for task in tasks {
         match task.status {
-            Status::TODO => println!("[]\t{}\t{}", task.id, task.content),
-            Status::IN_PROGRESS => println!("[*]\t{}\t{}", task.id, task.content),
-            Status::DONE => println!("[Y]\t{}\t{}", task.id, task.status),
-            _ => println!("[ELSE]\t{}\t{}", task.id, task.status)
+            Status::TODO => println!("[]\t{}", task.content),
+            Status::IN_PROGRESS => println!("[*]\t{}", task.content),
+            Status::DONE => println!("[Y]\t{}", task.status),
+            Status::DELETED => (),
+            _ => println!("[ELSE]\t{}", task.status)
         }
     }
+}
+
+pub fn rm(args: &Vec<String>, mut db: Database) {
+    let task_ids = &args[2..];
+    let mut  tasks = db.read_tasks().unwrap_or_else(|err| {
+        eprintln!("Error reading tasks: {}", err);
+        process::exit(1);
+    });
+    task_ids.iter().for_each(|id| {
+        let id = id.parse::<u32>().unwrap_or_else(|err| {
+            eprintln!("Error parsing task id: {}", err);
+            process::exit(1);
+        });
+        
+        if id > tasks.len() as u32 {
+            eprintln!("Task {} does not exist", id);
+            process::exit(1);
+        };
+    });
+    tasks.iter_mut().for_each(|task| {
+        if task_ids.contains(&task.id.to_string()) {
+            task.status = Status::DELETED;
+        }
+    });
+    db.update_task(tasks).unwrap()
 }

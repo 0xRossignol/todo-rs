@@ -1,8 +1,8 @@
 use std::fmt;
 use std::fs::{File, OpenOptions};
-use std::io::{self, Seek, Write};
+use std::io::{self, Seek};
 
-use csv::{ReaderBuilder, WriterBuilder};
+use csv::{ReaderBuilder, Writer, WriterBuilder};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +18,7 @@ pub enum Status {
     IN_PROGRESS,
     DONE,
     ELSE,
+    DELETED
 }
 
 pub struct Database {
@@ -31,6 +32,7 @@ impl fmt::Display for Status {
             Status::IN_PROGRESS => "IN_PROGRESS",
             Status::DONE => "DONE",
             Status::ELSE => "ELSE",
+            Status::DELETED => "DELETED",
         };
         write!(f, "{}", status_str)
     }
@@ -68,6 +70,16 @@ impl Database {
             .open(filename)?;
 
         Ok(Database { file })
+    }
+
+    pub fn open_for_update(filename: &str) -> io::Result<File> {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(filename)?;
+        Ok(file)
     }
 
     /// 向数据库中添加一条任务记录。
@@ -137,4 +149,26 @@ impl Database {
 
         Ok(tasks)
     }
+
+    pub fn update_task(&mut self, mut task: Vec<Task>) -> io::Result<()> {
+        let mut tasks = self.read_tasks()?; // 获取任务列表（假设是 Vec<Task>）
+
+        for t in &mut tasks {
+            for tar in task.iter_mut() {
+                if t.id == tar.id {
+                    *t = tar.clone(); // 更新内容
+                }
+            }
+        }
+
+        let mut wtr = WriterBuilder::new()
+            .has_headers(false)
+            .from_writer(Database::open_for_update("rodo_tasks.csv")?);
+        for task in tasks {
+            wtr.serialize(task)?;
+        }
+        wtr.flush()?;
+        Ok(())
+    }
+
 }

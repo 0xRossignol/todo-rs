@@ -1,7 +1,7 @@
 mod task;
 mod run;
 
-use crate::task::{Database, Status};
+use crate::task::Database;
 use std::{env, process};
 
 fn main() {
@@ -15,7 +15,7 @@ fn main() {
 
     let command = &args[1];
 
-    let mut db = Database::open("rodo_tasks.csv").unwrap_or_else(|err| {
+    let db = Database::open("rodo_tasks.csv").unwrap_or_else(|err| {
         eprintln!("Error opening database: {}", err);
         process::exit(1);
     });
@@ -31,8 +31,7 @@ fn main() {
             if args.len() < 3 {
                 print_usage_and_exit();
             }
-
-            println!("Removing: {}", args[2]);
+            run::rm(&args, db)
         }
         "ls" => {
             run::ls(db)
@@ -52,8 +51,6 @@ fn print_usage_and_exit() -> ! {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn cli_process() {}
 }
